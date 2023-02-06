@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.8.0) (utils/cryptography/EIP712.sol)
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.8;
 
 import "./ECDSA.sol";
+import "../ShortStrings.sol";
+import "../../interfaces/ERC5267.sol";
 
 /**
  * @dev https://eips.ethereum.org/EIPS/eip-712[EIP 712] is a standard for hashing and signing of typed structured data.
@@ -24,7 +26,9 @@ import "./ECDSA.sol";
  *
  * _Available since v3.4._
  */
-abstract contract EIP712 {
+abstract contract EIP712 is ERC5267 {
+    using ShortStrings for *;
+
     /* solhint-disable var-name-mixedcase */
     // Cache the domain separator as an immutable value, but also store the chain id that it corresponds to, in order to
     // invalidate the cached domain separator if the chain id changes.
@@ -34,7 +38,13 @@ abstract contract EIP712 {
 
     bytes32 private immutable _HASHED_NAME;
     bytes32 private immutable _HASHED_VERSION;
-    bytes32 private immutable _TYPE_HASH;
+    bytes32 private immutable _TYPE_HASH =
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+
+    ShortString private immutable _NAME;
+    ShortString private immutable _VERSION;
+    string private _NAME_FALLBACK;
+    string private _VERSION_FALLBACK;
 
     /* solhint-enable var-name-mixedcase */
 
@@ -51,17 +61,14 @@ abstract contract EIP712 {
      * contract upgrade].
      */
     constructor(string memory name, string memory version) {
-        bytes32 hashedName = keccak256(bytes(name));
-        bytes32 hashedVersion = keccak256(bytes(version));
-        bytes32 typeHash = keccak256(
-            "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
-        );
-        _HASHED_NAME = hashedName;
-        _HASHED_VERSION = hashedVersion;
+        _NAME = name.toShortStringWithFallback(_NAME_FALLBACK);
+        _VERSION = version.toShortStringWithFallback(_VERSION_FALLBACK);
+
+        _HASHED_NAME = keccak256(bytes(name));
+        _HASHED_VERSION = keccak256(bytes(version));
         _CACHED_CHAIN_ID = block.chainid;
-        _CACHED_DOMAIN_SEPARATOR = _buildDomainSeparator(typeHash, hashedName, hashedVersion);
+        _CACHED_DOMAIN_SEPARATOR = _buildDomainSeparator();
         _CACHED_THIS = address(this);
-        _TYPE_HASH = typeHash;
     }
 
     /**
@@ -71,16 +78,12 @@ abstract contract EIP712 {
         if (address(this) == _CACHED_THIS && block.chainid == _CACHED_CHAIN_ID) {
             return _CACHED_DOMAIN_SEPARATOR;
         } else {
-            return _buildDomainSeparator(_TYPE_HASH, _HASHED_NAME, _HASHED_VERSION);
+            return _buildDomainSeparator();
         }
     }
 
-    function _buildDomainSeparator(
-        bytes32 typeHash,
-        bytes32 nameHash,
-        bytes32 versionHash
-    ) private view returns (bytes32) {
-        return keccak256(abi.encode(typeHash, nameHash, versionHash, block.chainid, address(this)));
+    function _buildDomainSeparator() private view returns (bytes32) {
+        return keccak256(abi.encode(_TYPE_HASH, _HASHED_NAME, _HASHED_VERSION, block.chainid, address(this)));
     }
 
     /**
@@ -100,5 +103,34 @@ abstract contract EIP712 {
      */
     function _hashTypedDataV4(bytes32 structHash) internal view virtual returns (bytes32) {
         return ECDSA.toTypedDataHash(_domainSeparatorV4(), structHash);
+    }
+
+    /**
+     * @dev See {EIP-5267}.
+     */
+    function eip712Domain()
+        public
+        view
+        virtual
+        override
+        returns (
+            bytes1 fields,
+            string memory name,
+            string memory version,
+            uint256 chainId,
+            address verifyingContract,
+            bytes32 salt,
+            uint256[] memory extensions
+        )
+    {
+        return (
+            hex"0f", // 01111
+            _NAME.toStringWithFallback(_NAME_FALLBACK),
+            _VERSION.toStringWithFallback(_VERSION_FALLBACK),
+            block.chainid,
+            address(this),
+            bytes32(0),
+            new uint256[](0)
+        );
     }
 }
