@@ -37,6 +37,14 @@ const INTERFACES = {
     'renounceRole(bytes32,address)',
   ],
   AccessControlEnumerable: ['getRoleMember(bytes32,uint256)', 'getRoleMemberCount(bytes32)'],
+  AccessControlAdminRules: [
+    'admin()',
+    'delayedUntil()',
+    'pendingAdmin()',
+    'beginAdminTransfer(address)',
+    'acceptAdminTransfer()',
+    'cancelAdminTransfer()',
+  ],
   Governor: [
     'name()',
     'version()',
