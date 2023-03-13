@@ -32,6 +32,7 @@ methods {
 */
 // Uniformly handle scheduling of batched and non-batched operations.
 function helperScheduleWithRevert(env e, method f, bytes32 id, uint256 delay) {
+    assert f.selector == schedule(address, uint256, bytes, bytes32, bytes32, uint256).selector || f.selector == scheduleBatch(address[], uint256[], bytes[], bytes32, bytes32, uint256).selector;
     if (f.selector == schedule(address, uint256, bytes, bytes32, bytes32, uint256).selector) {
         address target; uint256 value; bytes data; bytes32 predecessor; bytes32 salt;
         require hashOperation(target, value, data, predecessor, salt) == id; // Correlation
@@ -40,13 +41,12 @@ function helperScheduleWithRevert(env e, method f, bytes32 id, uint256 delay) {
         address[] targets; uint256[] values; bytes[] payloads; bytes32 predecessor; bytes32 salt;
         require hashOperationBatch(targets, values, payloads, predecessor, salt) == id; // Correlation
         scheduleBatch@withrevert(e, targets, values, payloads, predecessor, salt, delay);
-    } else {
-        assert false;
     }
 }
 
 // Uniformly handle execution of batched and non-batched operations.
 function helperExecuteWithRevert(env e, method f, bytes32 id, bytes32 predecessor) {
+    assert f.selector == execute(address, uint256, bytes, bytes32, bytes32).selector || f.selector == executeBatch(address[], uint256[], bytes[], bytes32, bytes32).selector;
     if (f.selector == execute(address, uint256, bytes, bytes32, bytes32).selector) {
         address target; uint256 value; bytes data; bytes32 salt;
         require hashOperation(target, value, data, predecessor, salt) == id; // Correlation
@@ -55,8 +55,6 @@ function helperExecuteWithRevert(env e, method f, bytes32 id, bytes32 predecesso
         address[] targets; uint256[] values; bytes[] payloads; bytes32 salt;
         require hashOperationBatch(targets, values, payloads, predecessor, salt) == id; // Correlation
         executeBatch@withrevert(e, targets, values, payloads, predecessor, salt);
-    } else {
-        assert false;
     }
 }
 
