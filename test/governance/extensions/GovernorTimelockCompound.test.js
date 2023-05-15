@@ -37,98 +37,12 @@ contract('GovernorTimelockCompound', function (accounts) {
   const votingPeriod = web3.utils.toBN(16);
   const value = web3.utils.toWei('1');
 
-<<<<<<< HEAD
-  beforeEach(async function () {
-    const [deployer] = await web3.eth.getAccounts();
-
-    this.token = await Token.new(tokenName, tokenSymbol, tokenName, version);
-
-    // Need to predict governance address to set it as timelock admin with a delayed transfer
-    const nonce = await web3.eth.getTransactionCount(deployer);
-    const predictGovernor = makeContractAddress(deployer, nonce + 1);
-
-    this.timelock = await Timelock.new(predictGovernor, 2 * 86400);
-    this.mock = await Governor.new(name, votingDelay, votingPeriod, 0, this.timelock.address, this.token.address, 0);
-    this.receiver = await CallReceiver.new();
-
-    this.helper = new GovernorHelper(this.mock);
-
-    await web3.eth.sendTransaction({ from: owner, to: this.timelock.address, value });
-
-    await this.token.$_mint(owner, tokenSupply);
-    await this.helper.delegate({ token: this.token, to: voter1, value: web3.utils.toWei('10') }, { from: owner });
-    await this.helper.delegate({ token: this.token, to: voter2, value: web3.utils.toWei('7') }, { from: owner });
-    await this.helper.delegate({ token: this.token, to: voter3, value: web3.utils.toWei('5') }, { from: owner });
-    await this.helper.delegate({ token: this.token, to: voter4, value: web3.utils.toWei('2') }, { from: owner });
-
-    // default proposal
-    this.proposal = this.helper.setProposal(
-      [
-        {
-          target: this.receiver.address,
-          value,
-          data: this.receiver.contract.methods.mockFunction().encodeABI(),
-        },
-      ],
-      '<proposal description>',
-    );
-  });
-
-  shouldSupportInterfaces(['ERC165', 'Governor', 'GovernorWithParams', 'GovernorTimelock']);
-
-  it("doesn't accept ether transfers", async function () {
-    await expectRevert.unspecified(web3.eth.sendTransaction({ from: owner, to: this.mock.address, value: 1 }));
-  });
-
-  it('post deployment check', async function () {
-    expect(await this.mock.name()).to.be.equal(name);
-    expect(await this.mock.token()).to.be.equal(this.token.address);
-    expect(await this.mock.votingDelay()).to.be.bignumber.equal(votingDelay);
-    expect(await this.mock.votingPeriod()).to.be.bignumber.equal(votingPeriod);
-    expect(await this.mock.quorum(0)).to.be.bignumber.equal('0');
-
-    expect(await this.mock.timelock()).to.be.equal(this.timelock.address);
-    expect(await this.timelock.admin()).to.be.equal(this.mock.address);
-  });
-
-  it('nominal', async function () {
-    await this.helper.propose();
-    await this.helper.waitForSnapshot();
-    await this.helper.vote({ support: Enums.VoteType.For }, { from: voter1 });
-    await this.helper.vote({ support: Enums.VoteType.For }, { from: voter2 });
-    await this.helper.vote({ support: Enums.VoteType.Against }, { from: voter3 });
-    await this.helper.vote({ support: Enums.VoteType.Abstain }, { from: voter4 });
-    await this.helper.waitForDeadline();
-    const txQueue = await this.helper.queue();
-    const eta = await this.mock.proposalEta(this.proposal.id);
-    await this.helper.waitForEta();
-    const txExecute = await this.helper.execute();
-
-    expectEvent(txQueue, 'ProposalQueued', { proposalId: this.proposal.id });
-    await expectEvent.inTransaction(txQueue.tx, this.timelock, 'QueueTransaction', { eta });
-
-    expectEvent(txExecute, 'ProposalExecuted', { proposalId: this.proposal.id });
-    await expectEvent.inTransaction(txExecute.tx, this.timelock, 'ExecuteTransaction', { eta });
-    await expectEvent.inTransaction(txExecute.tx, this.receiver, 'MockFunctionCalled');
-  });
-
-  describe('should revert', function () {
-    describe('on queue', function () {
-      it('if already queued', async function () {
-        await this.helper.propose();
-        await this.helper.waitForSnapshot();
-        await this.helper.vote({ support: Enums.VoteType.For }, { from: voter1 });
-        await this.helper.waitForDeadline();
-        await this.helper.queue();
-        await expectRevert(this.helper.queue(), 'Governor: proposal not successful');
-      });
-=======
   for (const { mode, Token } of TOKENS) {
     describe(`using ${Token._json.contractName}`, function () {
       beforeEach(async function () {
         const [deployer] = await web3.eth.getAccounts();
 
-        this.token = await Token.new(tokenName, tokenSymbol, tokenName);
+        this.token = await Token.new(tokenName, tokenSymbol, tokenName, version);
 
         // Need to predict governance address to set it as timelock admin with a delayed transfer
         const nonce = await web3.eth.getTransactionCount(deployer);
@@ -145,7 +59,6 @@ contract('GovernorTimelockCompound', function (accounts) {
           0,
         );
         this.receiver = await CallReceiver.new();
->>>>>>> master
 
         this.helper = new GovernorHelper(this.mock, mode);
 

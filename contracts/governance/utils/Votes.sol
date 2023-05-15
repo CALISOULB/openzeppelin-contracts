@@ -7,11 +7,6 @@ import "../../utils/Context.sol";
 import "../../utils/Nonces.sol";
 import "../../utils/Checkpoints.sol";
 import "../../utils/cryptography/EIP712.sol";
-<<<<<<< HEAD
-import "./IVotes.sol";
-import "../../utils/math/SafeCast.sol";
-=======
->>>>>>> master
 
 /**
  * @dev This is a base abstract contract that tracks voting units, which are a measure of voting power that can be
@@ -33,14 +28,8 @@ import "../../utils/math/SafeCast.sol";
  *
  * _Available since v4.5._
  */
-<<<<<<< HEAD
-abstract contract Votes is IVotes, Context, EIP712, Nonces {
-    using Checkpoints for Checkpoints.History;
-=======
-abstract contract Votes is Context, EIP712, IERC5805 {
+abstract contract Votes is Context, EIP712, Nonces, IERC5805 {
     using Checkpoints for Checkpoints.Trace224;
-    using Counters for Counters.Counter;
->>>>>>> master
 
     bytes32 private constant _DELEGATION_TYPEHASH =
         keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
@@ -103,14 +92,9 @@ abstract contract Votes is Context, EIP712, IERC5805 {
      *
      * - `timepoint` must be in the past. If operating using block numbers, the block must be already mined.
      */
-<<<<<<< HEAD
-    function getPastTotalSupply(uint256 blockNumber) public view virtual override returns (uint256) {
-        return _totalCheckpoints.getAtProbablyRecentBlock(blockNumber);
-=======
     function getPastTotalSupply(uint256 timepoint) public view virtual override returns (uint256) {
         require(timepoint < clock(), "Votes: future lookup");
         return _totalCheckpoints.upperLookupRecent(SafeCast.toUint32(timepoint));
->>>>>>> master
     }
 
     /**
@@ -208,8 +192,23 @@ abstract contract Votes is Context, EIP712, IERC5805 {
         }
     }
 
-<<<<<<< HEAD
-=======
+    /**
+     * @dev Get number of checkpoints for `account`.
+     */
+    function _numCheckpoints(address account) internal view virtual returns (uint32) {
+        return SafeCast.toUint32(_delegateCheckpoints[account].length());
+    }
+
+    /**
+     * @dev Get the `pos`-th checkpoint for `account`.
+     */
+    function _checkpoints(
+        address account,
+        uint32 pos
+    ) internal view virtual returns (Checkpoints.Checkpoint224 memory) {
+        return _delegateCheckpoints[account].at(pos);
+    }
+
     function _push(
         Checkpoints.Trace224 storage store,
         function(uint224, uint224) view returns (uint224) op,
@@ -223,29 +222,6 @@ abstract contract Votes is Context, EIP712, IERC5805 {
     }
 
     function _subtract(uint224 a, uint224 b) private pure returns (uint224) {
-        return a - b;
-    }
-
->>>>>>> master
-    /**
-     * @dev Get number of checkpoints for `account`.
-     */
-    function _numCheckpoints(address account) internal view virtual returns (uint32) {
-        return SafeCast.toUint32(_delegateCheckpoints[account].length());
-    }
-
-    /**
-     * @dev Get the `pos`-th checkpoint for `account`.
-     */
-    function _checkpoints(address account, uint32 pos) internal view virtual returns (Checkpoints.Checkpoint memory) {
-        return _delegateCheckpoints[account].getAtPosition(pos);
-    }
-
-    function _add(uint256 a, uint256 b) private pure returns (uint256) {
-        return a + b;
-    }
-
-    function _subtract(uint256 a, uint256 b) private pure returns (uint256) {
         return a - b;
     }
 

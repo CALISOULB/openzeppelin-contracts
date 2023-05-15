@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "../token/ERC20/ERC20.sol";
-import "../token/ERC20/extensions/ERC4626.sol";
+import "../../token/ERC20/ERC20.sol";
+import "../../token/ERC20/extensions/ERC4626.sol";
 
 contract ERC20Reentrant is ERC20("TEST", "TST") {
     enum Type {
@@ -25,16 +25,12 @@ contract ERC20Reentrant is ERC20("TEST", "TST") {
         return Address.functionCall(target, data);
     }
 
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal override {
+    function _update(address from, address to, uint256 amount) internal override {
         if (_reenterType == Type.Before) {
             _reenterType = Type.No;
             functionCall(_reenterTarget, _reenterData);
         }
-        super._beforeTokenTransfer(from, to, amount);
-    }
-
-    function _afterTokenTransfer(address from, address to, uint256 amount) internal override {
-        super._afterTokenTransfer(from, to, amount);
+        super._update(from, to, amount);
         if (_reenterType == Type.After) {
             _reenterType = Type.No;
             functionCall(_reenterTarget, _reenterData);

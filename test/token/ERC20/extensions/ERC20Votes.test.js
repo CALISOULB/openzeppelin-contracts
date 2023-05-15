@@ -13,8 +13,6 @@ const { batchInBlock } = require('../../../helpers/txpool');
 const { getDomain, domainType, domainSeparator } = require('../../../helpers/eip712');
 const { clock, clockFromReceipt } = require('../../../helpers/time');
 
-const { shouldBehaveLikeEIP6372 } = require('../../../governance/utils/EIP6372.behavior');
-
 const Delegation = [
   { name: 'delegatee', type: 'address' },
   { name: 'nonce', type: 'uint256' },
@@ -31,74 +29,18 @@ contract('ERC20Votes', function (accounts) {
 
   const name = 'My Token';
   const symbol = 'MTKN';
+  const version = '1';
   const supply = new BN('10000000000000000000000000');
 
-<<<<<<< HEAD
-  beforeEach(async function () {
-    this.chainId = await getChainId();
-    this.token = await ERC20Votes.new(name, symbol, name, version);
-  });
-
-  it('initial nonce is 0', async function () {
-    expect(await this.token.nonces(holder)).to.be.bignumber.equal('0');
-  });
-
-  it('domain separator', async function () {
-    expect(await this.token.DOMAIN_SEPARATOR()).to.equal(
-      await domainSeparator({ name, version, chainId: this.chainId, verifyingContract: this.token.address }),
-    );
-  });
-
-  it('minting restriction', async function () {
-    const amount = new BN('2').pow(new BN('224'));
-    await expectRevert(this.token.$_mint(holder, amount), 'ERC20Votes: total supply risks overflowing votes');
-  });
-
-  it('recent checkpoints', async function () {
-    await this.token.delegate(holder, { from: holder });
-    for (let i = 0; i < 6; i++) {
-      await this.token.$_mint(holder, 1);
-    }
-    const block = await web3.eth.getBlockNumber();
-    // recent
-    expect(await this.token.getPastVotes(holder, block - 1)).to.be.bignumber.equal('5');
-    // non-recent
-    expect(await this.token.getPastVotes(holder, block - 6)).to.be.bignumber.equal('0');
-  });
-
-  describe('set delegation', function () {
-    describe('call', function () {
-      it('delegation with balance', async function () {
-        await this.token.$_mint(holder, supply);
-        expect(await this.token.delegates(holder)).to.be.equal(ZERO_ADDRESS);
-
-        const { receipt } = await this.token.delegate(holder, { from: holder });
-        expectEvent(receipt, 'DelegateChanged', {
-          delegator: holder,
-          fromDelegate: ZERO_ADDRESS,
-          toDelegate: holder,
-        });
-        expectEvent(receipt, 'DelegateVotesChanged', {
-          delegate: holder,
-          previousBalance: '0',
-          newBalance: supply,
-        });
-
-        expect(await this.token.delegates(holder)).to.be.equal(holder);
-
-        expect(await this.token.getVotes(holder)).to.be.bignumber.equal(supply);
-        expect(await this.token.getPastVotes(holder, receipt.blockNumber - 1)).to.be.bignumber.equal('0');
-        await time.advanceBlock();
-        expect(await this.token.getPastVotes(holder, receipt.blockNumber)).to.be.bignumber.equal(supply);
-=======
   for (const [mode, artifact] of Object.entries(MODES)) {
     describe(`vote with ${mode}`, function () {
       beforeEach(async function () {
-        this.token = await artifact.new(name, symbol, name);
->>>>>>> master
+        this.token = await artifact.new(name, symbol, name, version);
+        this.votes = this.token;
       });
 
-      shouldBehaveLikeEIP6372(mode);
+      // includes EIP6372 behavior check
+      shouldBehaveLikeVotes(accounts, [1, 17, 42], { mode, fungible: true });
 
       it('initial nonce is 0', async function () {
         expect(await this.token.nonces(holder)).to.be.bignumber.equal('0');
@@ -118,12 +60,12 @@ contract('ERC20Votes', function (accounts) {
         for (let i = 0; i < 6; i++) {
           await this.token.$_mint(holder, 1);
         }
-        const block = await clock[mode]();
+        const timepoint = await clock[mode]();
         expect(await this.token.numCheckpoints(holder)).to.be.bignumber.equal('6');
         // recent
-        expect(await this.token.getPastVotes(holder, block - 1)).to.be.bignumber.equal('5');
+        expect(await this.token.getPastVotes(holder, timepoint - 1)).to.be.bignumber.equal('5');
         // non-recent
-        expect(await this.token.getPastVotes(holder, block - 6)).to.be.bignumber.equal('0');
+        expect(await this.token.getPastVotes(holder, timepoint - 6)).to.be.bignumber.equal('0');
       });
 
       describe('set delegation', function () {
@@ -226,19 +168,11 @@ contract('ERC20Votes', function (accounts) {
 
             await this.token.delegateBySig(delegatorAddress, nonce, MAX_UINT256, v, r, s);
 
-<<<<<<< HEAD
-        await expectRevert(
-          this.token.delegateBySig(delegatorAddress, nonce, MAX_UINT256, v, r, s),
-          'Votes: invalid nonce',
-        );
-      });
-=======
             await expectRevert(
               this.token.delegateBySig(delegatorAddress, nonce, MAX_UINT256, v, r, s),
-              'ERC20Votes: invalid nonce',
+              'Votes: invalid nonce',
             );
           });
->>>>>>> master
 
           it('rejects bad delegatee', async function () {
             const { v, r, s } = await buildData(this.token, {
@@ -259,24 +193,13 @@ contract('ERC20Votes', function (accounts) {
               delegatee: delegatorAddress,
               nonce,
               expiry: MAX_UINT256,
-<<<<<<< HEAD
-            }),
-          ),
-        );
-        await expectRevert(
-          this.token.delegateBySig(delegatorAddress, nonce + 1, MAX_UINT256, v, r, s),
-          'Votes: invalid nonce',
-        );
-      });
-=======
             }).then(data => fromRpcSig(ethSigUtil.signTypedMessage(delegator.getPrivateKey(), { data })));
 
             await expectRevert(
               this.token.delegateBySig(delegatorAddress, nonce + 1, MAX_UINT256, v, r, s),
-              'ERC20Votes: invalid nonce',
+              'Votes: invalid nonce',
             );
           });
->>>>>>> master
 
           it('rejects expired permit', async function () {
             const expiry = (await time.latest()) - time.duration.weeks(1);
@@ -284,51 +207,11 @@ contract('ERC20Votes', function (accounts) {
               delegatee: delegatorAddress,
               nonce,
               expiry,
-<<<<<<< HEAD
-            }),
-          ),
-        );
-
-        await expectRevert(
-          this.token.delegateBySig(delegatorAddress, nonce, expiry, v, r, s),
-          'Votes: signature expired',
-        );
-      });
-    });
-  });
-
-  describe('change delegation', function () {
-    beforeEach(async function () {
-      await this.token.$_mint(holder, supply);
-      await this.token.delegate(holder, { from: holder });
-    });
-
-    it('call', async function () {
-      expect(await this.token.delegates(holder)).to.be.equal(holder);
-
-      const { receipt } = await this.token.delegate(holderDelegatee, { from: holder });
-      expectEvent(receipt, 'DelegateChanged', {
-        delegator: holder,
-        fromDelegate: holder,
-        toDelegate: holderDelegatee,
-      });
-      expectEvent(receipt, 'DelegateVotesChanged', {
-        delegate: holder,
-        previousBalance: supply,
-        newBalance: '0',
-      });
-      expectEvent(receipt, 'DelegateVotesChanged', {
-        delegate: holderDelegatee,
-        previousBalance: '0',
-        newBalance: supply,
-      });
-=======
             }).then(data => fromRpcSig(ethSigUtil.signTypedMessage(delegator.getPrivateKey(), { data })));
->>>>>>> master
 
             await expectRevert(
               this.token.delegateBySig(delegatorAddress, nonce, expiry, v, r, s),
-              'ERC20Votes: signature expired',
+              'Votes: signature expired',
             );
           });
         });
@@ -374,26 +257,6 @@ contract('ERC20Votes', function (accounts) {
         });
       });
 
-<<<<<<< HEAD
-      // need to advance 2 blocks to see the effect of a transfer on "getPastVotes"
-      const blockNumber = await time.latestBlock();
-      await time.advanceBlock();
-      expect(await this.token.getPastVotes(holder, blockNumber)).to.be.bignumber.equal(this.holderVotes);
-      expect(await this.token.getPastVotes(recipient, blockNumber)).to.be.bignumber.equal(this.recipientVotes);
-    });
-  });
-
-  // The following tests are a adaptation of https://github.com/compound-finance/compound-protocol/blob/master/tests/Governance/CompTest.js.
-  describe('Compound test suite', function () {
-    beforeEach(async function () {
-      await this.token.$_mint(holder, supply);
-    });
-
-    describe('numCheckpoints', function () {
-      it('returns the number of checkpoints for a delegate', async function () {
-        await this.token.transfer(recipient, '100', { from: holder }); //give an account a few tokens for readability
-        expect(await this.token.numCheckpoints(other1)).to.be.bignumber.equal('0');
-=======
       describe('transfers', function () {
         beforeEach(async function () {
           await this.token.$_mint(holder, supply);
@@ -403,7 +266,6 @@ contract('ERC20Votes', function (accounts) {
           const { receipt } = await this.token.transfer(recipient, 1, { from: holder });
           expectEvent(receipt, 'Transfer', { from: holder, to: recipient, value: '1' });
           expectEvent.notEmitted(receipt, 'DelegateVotesChanged');
->>>>>>> master
 
           this.holderVotes = '0';
           this.recipientVotes = '0';
@@ -473,22 +335,9 @@ contract('ERC20Votes', function (accounts) {
           this.recipientVotes = '1';
         });
 
-<<<<<<< HEAD
-    describe('balanceOf', function () {
-      it('grants to initial account', async function () {
-        expect(await this.token.balanceOf(holder)).to.be.bignumber.equal('10000000000000000000000000');
-      });
-    });
-
-    describe('getPastVotes', function () {
-      it('reverts if block number >= current block', async function () {
-        await expectRevert(this.token.getPastVotes(other1, 5e10), 'Checkpoints: block not yet mined');
-      });
-=======
         afterEach(async function () {
           expect(await this.token.getVotes(holder)).to.be.bignumber.equal(this.holderVotes);
           expect(await this.token.getVotes(recipient)).to.be.bignumber.equal(this.recipientVotes);
->>>>>>> master
 
           // need to advance 2 blocks to see the effect of a transfer on "getPastVotes"
           const timepoint = await clock[mode]();
@@ -569,7 +418,7 @@ contract('ERC20Votes', function (accounts) {
 
         describe('getPastVotes', function () {
           it('reverts if block number >= current block', async function () {
-            await expectRevert(this.token.getPastVotes(other1, 5e10), 'ERC20Votes: future lookup');
+            await expectRevert(this.token.getPastVotes(other1, 5e10), 'Votes: future lookup');
           });
 
           it('returns 0 if there are no checkpoints', async function () {
@@ -651,19 +500,13 @@ contract('ERC20Votes', function (accounts) {
         });
       });
 
-<<<<<<< HEAD
-    it('reverts if block number >= current block', async function () {
-      await expectRevert(this.token.getPastTotalSupply(5e10), 'Checkpoints: block not yet mined');
-    });
-=======
       describe('getPastTotalSupply', function () {
         beforeEach(async function () {
           await this.token.delegate(holder, { from: holder });
         });
->>>>>>> master
 
         it('reverts if block number >= current block', async function () {
-          await expectRevert(this.token.getPastTotalSupply(5e10), 'ERC20Votes: future lookup');
+          await expectRevert(this.token.getPastTotalSupply(5e10), 'Votes: future lookup');
         });
 
         it('returns 0 if there are no checkpoints', async function () {
@@ -673,7 +516,6 @@ contract('ERC20Votes', function (accounts) {
         it('returns the latest block if >= last checkpoint block', async function () {
           const { receipt } = await this.token.$_mint(holder, supply);
           const timepoint = await clockFromReceipt[mode](receipt);
-
           await time.advanceBlock();
           await time.advanceBlock();
 
@@ -733,18 +575,5 @@ contract('ERC20Votes', function (accounts) {
         });
       });
     });
-<<<<<<< HEAD
-  });
-
-  describe('Voting workflow', function () {
-    beforeEach(async function () {
-      this.name = name;
-      this.votes = this.token;
-    });
-
-    shouldBehaveLikeVotes(accounts, [1, 17, 42]);
-  });
-=======
   }
->>>>>>> master
 });

@@ -134,13 +134,6 @@ function getAtProbablyRecentBlock(${opts.historyTypeName} storage self, uint256 
 }
 
 /**
- * @dev Returns checkpoint at given position.
- */
-function getAtPosition(History storage self, uint32 pos) internal view returns (Checkpoint memory) {
-    return self._checkpoints[pos];
-}
-
-/**
  * @dev Pushes a value onto a History so that it is stored as the checkpoint for the current block.
  *
  * Returns previous value and new value.
@@ -200,6 +193,13 @@ function latestCheckpoint(${opts.historyTypeName} storage self)
  */
 function length(${opts.historyTypeName} storage self) internal view returns (uint256) {
     return self.${opts.checkpointFieldName}.length;
+}
+
+/**
+ * @dev Returns checkpoint at given position.
+ */
+function at(${opts.historyTypeName} storage self, uint32 pos) internal view returns (${opts.checkpointTypeName} memory) {
+    return self.${opts.checkpointFieldName}[pos];
 }
 
 /**

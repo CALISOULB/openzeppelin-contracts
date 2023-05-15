@@ -21,8 +21,6 @@
 
 * xref:utilities.adoc[Utilities]
 
-<<<<<<< HEAD
-* xref:fag.adoc[FAQ]
-=======
 * xref:subgraphs::index.adoc[Subgraphs]
->>>>>>> master
+
+* xref:faq.adoc[FAQ]

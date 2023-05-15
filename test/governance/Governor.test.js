@@ -5,12 +5,7 @@ const Wallet = require('ethereumjs-wallet').default;
 const { fromRpcSig } = require('ethereumjs-util');
 
 const Enums = require('../helpers/enums');
-<<<<<<< HEAD
-const { getChainId } = require('../helpers/chainid');
-const { EIP712Domain } = require('../helpers/eip712');
-=======
 const { getDomain, domainType } = require('../helpers/eip712');
->>>>>>> master
 const { GovernorHelper } = require('../helpers/governance');
 const { clockFromReceipt } = require('../helpers/time');
 
@@ -32,6 +27,7 @@ contract('Governor', function (accounts) {
   const [owner, proposer, voter1, voter2, voter3, voter4] = accounts;
 
   const name = 'OZ-Governor';
+  const version = '1';
   const tokenName = 'MockToken';
   const tokenSymbol = 'MTKN';
   const tokenSupply = web3.utils.toWei('100');
@@ -39,100 +35,16 @@ contract('Governor', function (accounts) {
   const votingPeriod = web3.utils.toBN(16);
   const value = web3.utils.toWei('1');
 
-<<<<<<< HEAD
-  beforeEach(async function () {
-    this.chainId = await getChainId();
-    this.token = await Token.new(tokenName, tokenSymbol, tokenName, version);
-    this.mock = await Governor.new(
-      name, // name
-      votingDelay, // initialVotingDelay
-      votingPeriod, // initialVotingPeriod
-      0, // initialProposalThreshold
-      this.token.address, // tokenAddress
-      10, // quorumNumeratorValue
-    );
-    this.receiver = await CallReceiver.new();
-
-    this.helper = new GovernorHelper(this.mock);
-
-    await web3.eth.sendTransaction({ from: owner, to: this.mock.address, value });
-
-    await this.token.$_mint(owner, tokenSupply);
-    await this.helper.delegate({ token: this.token, to: voter1, value: web3.utils.toWei('10') }, { from: owner });
-    await this.helper.delegate({ token: this.token, to: voter2, value: web3.utils.toWei('7') }, { from: owner });
-    await this.helper.delegate({ token: this.token, to: voter3, value: web3.utils.toWei('5') }, { from: owner });
-    await this.helper.delegate({ token: this.token, to: voter4, value: web3.utils.toWei('2') }, { from: owner });
-
-    this.proposal = this.helper.setProposal(
-      [
-        {
-          target: this.receiver.address,
-          data: this.receiver.contract.methods.mockFunction().encodeABI(),
-          value,
-        },
-      ],
-      '<proposal description>',
-    );
-  });
-
-  shouldSupportInterfaces(['ERC165', 'ERC1155Receiver', 'Governor', 'GovernorWithParams']);
-
-  it('deployment check', async function () {
-    expect(await this.mock.name()).to.be.equal(name);
-    expect(await this.mock.token()).to.be.equal(this.token.address);
-    expect(await this.mock.votingDelay()).to.be.bignumber.equal(votingDelay);
-    expect(await this.mock.votingPeriod()).to.be.bignumber.equal(votingPeriod);
-    expect(await this.mock.quorum(0)).to.be.bignumber.equal('0');
-    expect(await this.mock.COUNTING_MODE()).to.be.equal('support=bravo&quorum=for,abstain');
-  });
-
-  it('nominal workflow', async function () {
-    // Before
-    expect(await this.mock.hasVoted(this.proposal.id, owner)).to.be.equal(false);
-    expect(await this.mock.hasVoted(this.proposal.id, voter1)).to.be.equal(false);
-    expect(await this.mock.hasVoted(this.proposal.id, voter2)).to.be.equal(false);
-    expect(await web3.eth.getBalance(this.mock.address)).to.be.bignumber.equal(value);
-    expect(await web3.eth.getBalance(this.receiver.address)).to.be.bignumber.equal('0');
-
-    // Run proposal
-    const txPropose = await this.helper.propose({ from: proposer });
-
-    expectEvent(txPropose, 'ProposalCreated', {
-      proposalId: this.proposal.id,
-      proposer,
-      targets: this.proposal.targets,
-      // values: this.proposal.values,
-      signatures: this.proposal.signatures,
-      calldatas: this.proposal.data,
-      startBlock: new BN(txPropose.receipt.blockNumber).add(votingDelay),
-      endBlock: new BN(txPropose.receipt.blockNumber).add(votingDelay).add(votingPeriod),
-      description: this.proposal.description,
-    });
-
-    await this.helper.waitForSnapshot();
-
-    expectEvent(
-      await this.helper.vote({ support: Enums.VoteType.For, reason: 'This is nice' }, { from: voter1 }),
-      'VoteCast',
-      {
-        voter: voter1,
-        support: Enums.VoteType.For,
-        reason: 'This is nice',
-        weight: web3.utils.toWei('10'),
-      },
-    );
-
-    expectEvent(await this.helper.vote({ support: Enums.VoteType.For }, { from: voter2 }), 'VoteCast', {
-      voter: voter2,
-      support: Enums.VoteType.For,
-      weight: web3.utils.toWei('7'),
-    });
-=======
   for (const { mode, Token } of TOKENS) {
     describe(`using ${Token._json.contractName}`, function () {
       beforeEach(async function () {
         this.chainId = await web3.eth.getChainId();
-        this.token = await Token.new(tokenName, tokenSymbol, tokenName);
+        try {
+          this.token = await Token.new(tokenName, tokenSymbol, tokenName, version);
+        } catch {
+          // ERC20VotesLegacyMock has a different construction that uses version='1' by default.
+          this.token = await Token.new(tokenName, tokenSymbol, tokenName);
+        }
         this.mock = await Governor.new(
           name, // name
           votingDelay, // initialVotingDelay
@@ -142,7 +54,6 @@ contract('Governor', function (accounts) {
           10, // quorumNumeratorValue
         );
         this.receiver = await CallReceiver.new();
->>>>>>> master
 
         this.helper = new GovernorHelper(this.mock, mode);
 

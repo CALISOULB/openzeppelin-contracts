@@ -43,7 +43,7 @@ contract('ProxyAdmin', function (accounts) {
       await this.proxyAdmin.changeProxyAdmin(this.proxy.address, newAdmin, { from: proxyAdminOwner });
 
       const newProxyAdmin = await getAddressInSlot(this.proxy, AdminSlot);
-      expect(newProxyAdmin).to.be.eq(newAdmin);
+      expect(newProxyAdmin).to.be.equal(newAdmin);
     });
   });
 
@@ -62,7 +62,7 @@ contract('ProxyAdmin', function (accounts) {
         await this.proxyAdmin.upgrade(this.proxy.address, this.implementationV2.address, { from: proxyAdminOwner });
 
         const implementationAddress = await getAddressInSlot(this.proxy, ImplementationSlot);
-        expect(implementationAddress).to.be.eq(this.implementationV2.address);
+        expect(implementationAddress).to.be.equal(this.implementationV2.address);
       });
     });
   });
@@ -99,7 +99,7 @@ contract('ProxyAdmin', function (accounts) {
             from: proxyAdminOwner,
           });
           const implementationAddress = await getAddressInSlot(this.proxy, ImplementationSlot);
-          expect(implementationAddress).to.be.eq(this.implementationV2.address);
+          expect(implementationAddress).to.be.equal(this.implementationV2.address);
         });
       });
     });

@@ -70,13 +70,6 @@ library Checkpoints {
     }
 
     /**
-     * @dev Returns checkpoint at given position.
-     */
-    function getAtPosition(History storage self, uint32 pos) internal view returns (Checkpoint memory) {
-        return self._checkpoints[pos];
-    }
-
-    /**
      * @dev Pushes a value onto a History so that it is stored as the checkpoint for the current block.
      *
      * Returns previous value and new value.
@@ -128,6 +121,13 @@ library Checkpoints {
      */
     function length(History storage self) internal view returns (uint256) {
         return self._checkpoints.length;
+    }
+
+    /**
+     * @dev Returns checkpoint at given position.
+     */
+    function at(History storage self, uint32 pos) internal view returns (Checkpoint memory) {
+        return self._checkpoints[pos];
     }
 
     /**
@@ -304,6 +304,13 @@ library Checkpoints {
     }
 
     /**
+     * @dev Returns checkpoint at given position.
+     */
+    function at(Trace224 storage self, uint32 pos) internal view returns (Checkpoint224 memory) {
+        return self._checkpoints[pos];
+    }
+
+    /**
      * @dev Pushes a (`key`, `value`) pair into an ordered list of checkpoints, either by inserting a new checkpoint,
      * or by updating the last one.
      */
@@ -477,6 +484,13 @@ library Checkpoints {
      */
     function length(Trace160 storage self) internal view returns (uint256) {
         return self._checkpoints.length;
+    }
+
+    /**
+     * @dev Returns checkpoint at given position.
+     */
+    function at(Trace160 storage self, uint32 pos) internal view returns (Checkpoint160 memory) {
+        return self._checkpoints[pos];
     }
 
     /**

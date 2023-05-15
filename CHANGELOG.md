@@ -1,6 +1,5 @@
 # Changelog
 
-<<<<<<< HEAD
 ### How to upgrade from 4.x
 
 #### ERC20, ERC721, and ERC1155
@@ -33,7 +32,7 @@ function supportsInterface(bytes4 interfaceId) public view virtual override retu
     return interfaceId == type(MyInterface).interfaceId || super.supportsInterface(interfaceId);
 }
 ```
-=======
+
 ### Breaking changes
 
 - `EIP712`: Addition of ERC5267 support requires support for user defined value types, which was released in Solidity version 0.8.8. This requires a pragma change from `^0.8.0` to `^0.8.8`.
@@ -58,7 +57,6 @@ function supportsInterface(bytes4 interfaceId) public view virtual override retu
 ### Breaking changes
 
 - `ERC721`: The internal function `_beforeTokenTransfer` no longer updates balances, which it previously did when `batchSize` was greater than 1. This change has no consequence unless a custom ERC721 extension is explicitly invoking `_beforeTokenTransfer`. Balance updates in extensions must now be done explicitly using `__unsafe_increaseBalance`, with a name that indicates that there is an invariant that has to be manually verified.
->>>>>>> master
 
 ## 4.8.1 (2023-01-12)
 

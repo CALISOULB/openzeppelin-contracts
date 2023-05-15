@@ -23,21 +23,13 @@ contract('GovernorComp', function (accounts) {
   const votingPeriod = web3.utils.toBN(16);
   const value = web3.utils.toWei('1');
 
-<<<<<<< HEAD
-  beforeEach(async function () {
-    this.owner = owner;
-    this.token = await Token.new(tokenName, tokenSymbol, tokenName, version);
-    this.mock = await Governor.new(name, this.token.address);
-    this.receiver = await CallReceiver.new();
-=======
   for (const { mode, Token } of TOKENS) {
     describe(`using ${Token._json.contractName}`, function () {
       beforeEach(async function () {
         this.owner = owner;
-        this.token = await Token.new(tokenName, tokenSymbol, tokenName);
+        this.token = await Token.new(tokenName, tokenSymbol, tokenName, version);
         this.mock = await Governor.new(name, this.token.address);
         this.receiver = await CallReceiver.new();
->>>>>>> master
 
         this.helper = new GovernorHelper(this.mock, mode);
 
