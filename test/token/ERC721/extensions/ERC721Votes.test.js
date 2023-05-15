@@ -170,6 +170,11 @@ contract('ERC721Votes', function (accounts) {
       this.name = name;
     });
 
+<<<<<<< HEAD
     shouldBehaveLikeVotes(accounts, tokens, false);
+=======
+    // includes EIP6372 behavior check
+    shouldBehaveLikeVotes();
+>>>>>>> master
   });
 });

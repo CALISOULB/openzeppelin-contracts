@@ -6,8 +6,15 @@ const { fromRpcSig } = require('ethereumjs-util');
 const ethSigUtil = require('eth-sig-util');
 const Wallet = require('ethereumjs-wallet').default;
 
+<<<<<<< HEAD
 const { EIP712Domain, domainSeparator } = require('../../helpers/eip712');
 const { web3 } = require('hardhat');
+=======
+const { shouldBehaveLikeEIP6372 } = require('./EIP6372.behavior');
+
+const { getDomain, domainType, domainSeparator } = require('../../helpers/eip712');
+const { clockFromReceipt } = require('../../helpers/time');
+>>>>>>> master
 
 const Delegation = [
   { name: 'delegatee', type: 'address' },
@@ -15,29 +22,43 @@ const Delegation = [
   { name: 'expiry', type: 'uint256' },
 ];
 
-const version = '1';
+function shouldBehaveLikeVotes(mode = 'blocknumber') {
+  shouldBehaveLikeEIP6372(mode);
 
+<<<<<<< HEAD
 function shouldBehaveLikeVotes(accounts, tokens, fungible = true) {
   const getWeight = token => web3.utils.toBN(fungible ? token : 1);
 
+=======
+>>>>>>> master
   describe('run votes workflow', function () {
     it('initial nonce is 0', async function () {
       expect(await this.votes.nonces(accounts[0])).to.be.bignumber.equal('0');
     });
 
     it('domain separator', async function () {
-      expect(await this.votes.DOMAIN_SEPARATOR()).to.equal(
-        await domainSeparator({
-          name: this.name,
-          version,
-          chainId: this.chainId,
-          verifyingContract: this.votes.address,
-        }),
-      );
+      expect(await this.votes.DOMAIN_SEPARATOR()).to.equal(domainSeparator(await getDomain(this.votes)));
     });
 
+<<<<<<< HEAD
     describe('delegation', function () {
       const token = tokens[0];
+=======
+    describe('delegation with signature', function () {
+      const delegator = Wallet.generate();
+      const delegatorAddress = web3.utils.toChecksumAddress(delegator.getAddressString());
+      const nonce = 0;
+
+      const buildAndSignData = async (contract, message, pk) => {
+        const data = await getDomain(contract).then(domain => ({
+          primaryType: 'Delegation',
+          types: { EIP712Domain: domainType(domain), Delegation },
+          domain,
+          message,
+        }));
+        return fromRpcSig(ethSigUtil.signTypedMessage(pk, { data }));
+      };
+>>>>>>> master
 
       it('delegation without tokens', async function () {
         expect(await this.votes.delegates(accounts[1])).to.be.equal(ZERO_ADDRESS);
@@ -53,6 +74,7 @@ function shouldBehaveLikeVotes(accounts, tokens, fungible = true) {
         expect(await this.votes.delegates(accounts[1])).to.be.equal(accounts[1]);
       });
 
+<<<<<<< HEAD
       it('delegation with tokens', async function () {
         await this.votes.$_mint(accounts[1], token);
         const weight = getWeight(token);
@@ -60,6 +82,24 @@ function shouldBehaveLikeVotes(accounts, tokens, fungible = true) {
         expect(await this.votes.delegates(accounts[1])).to.be.equal(ZERO_ADDRESS);
 
         const { receipt } = await this.votes.delegate(accounts[1], { from: accounts[1] });
+=======
+      it('accept signed delegation', async function () {
+        const { v, r, s } = await buildAndSignData(
+          this.votes,
+          {
+            delegatee: delegatorAddress,
+            nonce,
+            expiry: MAX_UINT256,
+          },
+          delegator.getPrivateKey(),
+        );
+
+        expect(await this.votes.delegates(delegatorAddress)).to.be.equal(ZERO_ADDRESS);
+
+        const { receipt } = await this.votes.delegateBySig(delegatorAddress, nonce, MAX_UINT256, v, r, s);
+        const timepoint = await clockFromReceipt[mode](receipt);
+
+>>>>>>> master
         expectEvent(receipt, 'DelegateChanged', {
           delegator: accounts[1],
           fromDelegate: ZERO_ADDRESS,
@@ -71,6 +111,7 @@ function shouldBehaveLikeVotes(accounts, tokens, fungible = true) {
           newBalance: weight,
         });
 
+<<<<<<< HEAD
         expect(await this.votes.delegates(accounts[1])).to.be.equal(accounts[1]);
         expect(await this.votes.getVotes(accounts[1])).to.be.bignumber.equal(weight);
         expect(await this.votes.getPastVotes(accounts[1], receipt.blockNumber - 1)).to.be.bignumber.equal('0');
@@ -113,6 +154,87 @@ function shouldBehaveLikeVotes(accounts, tokens, fungible = true) {
         await time.advanceBlock();
         expect(await this.votes.getPastVotes(accounts[1], receipt.blockNumber)).to.be.bignumber.equal('0');
         expect(await this.votes.getPastVotes(accounts[2], receipt.blockNumber)).to.be.bignumber.equal(weight);
+=======
+        expect(await this.votes.delegates(delegatorAddress)).to.be.equal(delegatorAddress);
+
+        expect(await this.votes.getVotes(delegatorAddress)).to.be.bignumber.equal('1');
+        expect(await this.votes.getPastVotes(delegatorAddress, timepoint - 1)).to.be.bignumber.equal('0');
+        await time.advanceBlock();
+        expect(await this.votes.getPastVotes(delegatorAddress, timepoint)).to.be.bignumber.equal('1');
+      });
+
+      it('rejects reused signature', async function () {
+        const { v, r, s } = await buildAndSignData(
+          this.votes,
+          {
+            delegatee: delegatorAddress,
+            nonce,
+            expiry: MAX_UINT256,
+          },
+          delegator.getPrivateKey(),
+        );
+
+        await this.votes.delegateBySig(delegatorAddress, nonce, MAX_UINT256, v, r, s);
+
+        await expectRevert(
+          this.votes.delegateBySig(delegatorAddress, nonce, MAX_UINT256, v, r, s),
+          'Votes: invalid nonce',
+        );
+      });
+
+      it('rejects bad delegatee', async function () {
+        const { v, r, s } = await buildAndSignData(
+          this.votes,
+          {
+            delegatee: delegatorAddress,
+            nonce,
+            expiry: MAX_UINT256,
+          },
+          delegator.getPrivateKey(),
+        );
+
+        const receipt = await this.votes.delegateBySig(this.account1Delegatee, nonce, MAX_UINT256, v, r, s);
+        const { args } = receipt.logs.find(({ event }) => event === 'DelegateChanged');
+        expect(args.delegator).to.not.be.equal(delegatorAddress);
+        expect(args.fromDelegate).to.be.equal(ZERO_ADDRESS);
+        expect(args.toDelegate).to.be.equal(this.account1Delegatee);
+      });
+
+      it('rejects bad nonce', async function () {
+        const { v, r, s } = await buildAndSignData(
+          this.votes,
+          {
+            delegatee: delegatorAddress,
+            nonce,
+            expiry: MAX_UINT256,
+          },
+          delegator.getPrivateKey(),
+        );
+
+        await expectRevert(
+          this.votes.delegateBySig(delegatorAddress, nonce + 1, MAX_UINT256, v, r, s),
+          'Votes: invalid nonce',
+        );
+      });
+
+      it('rejects expired permit', async function () {
+        const expiry = (await time.latest()) - time.duration.weeks(1);
+
+        const { v, r, s } = await buildAndSignData(
+          this.votes,
+          {
+            delegatee: delegatorAddress,
+            nonce,
+            expiry,
+          },
+          delegator.getPrivateKey(),
+        );
+
+        await expectRevert(
+          this.votes.delegateBySig(delegatorAddress, nonce, expiry, v, r, s),
+          'Votes: signature expired',
+        );
+>>>>>>> master
       });
 
       describe('with signature', function () {
@@ -145,9 +267,15 @@ function shouldBehaveLikeVotes(accounts, tokens, fungible = true) {
             ),
           );
 
+<<<<<<< HEAD
           expect(await this.votes.delegates(delegator.address)).to.be.equal(ZERO_ADDRESS);
 
           const { receipt } = await this.votes.delegateBySig(delegatee, nonce, MAX_UINT256, v, r, s);
+=======
+          const { receipt } = await this.votes.delegate(this.account1, { from: this.account1 });
+          const timepoint = await clockFromReceipt[mode](receipt);
+
+>>>>>>> master
           expectEvent(receipt, 'DelegateChanged', {
             delegator: delegator.address,
             fromDelegate: ZERO_ADDRESS,
@@ -159,12 +287,21 @@ function shouldBehaveLikeVotes(accounts, tokens, fungible = true) {
             newBalance: weight,
           });
 
+<<<<<<< HEAD
           expect(await this.votes.delegates(delegator.address)).to.be.equal(delegatee);
           expect(await this.votes.getVotes(delegator.address)).to.be.bignumber.equal('0');
           expect(await this.votes.getVotes(delegatee)).to.be.bignumber.equal(weight);
           expect(await this.votes.getPastVotes(delegatee, receipt.blockNumber - 1)).to.be.bignumber.equal('0');
           await time.advanceBlock();
           expect(await this.votes.getPastVotes(delegatee, receipt.blockNumber)).to.be.bignumber.equal(weight);
+=======
+          expect(await this.votes.delegates(this.account1)).to.be.equal(this.account1);
+
+          expect(await this.votes.getVotes(this.account1)).to.be.bignumber.equal('1');
+          expect(await this.votes.getPastVotes(this.account1, timepoint - 1)).to.be.bignumber.equal('0');
+          await time.advanceBlock();
+          expect(await this.votes.getPastVotes(this.account1, timepoint)).to.be.bignumber.equal('1');
+>>>>>>> master
         });
 
         it('rejects reused signature', async function () {
@@ -184,6 +321,7 @@ function shouldBehaveLikeVotes(accounts, tokens, fungible = true) {
           await expectRevert(this.votes.delegateBySig(delegatee, nonce, MAX_UINT256, v, r, s), 'Votes: invalid nonce');
         });
 
+<<<<<<< HEAD
         it('rejects bad delegatee', async function () {
           const { v, r, s } = fromRpcSig(
             ethSigUtil.signTypedMessage(
@@ -201,6 +339,23 @@ function shouldBehaveLikeVotes(accounts, tokens, fungible = true) {
           expect(args.delegator).to.not.be.equal(delegator.address);
           expect(args.fromDelegate).to.be.equal(ZERO_ADDRESS);
           expect(args.toDelegate).to.be.equal(other);
+=======
+      it('call', async function () {
+        expect(await this.votes.delegates(this.account1)).to.be.equal(this.account1);
+
+        const { receipt } = await this.votes.delegate(this.account1Delegatee, { from: this.account1 });
+        const timepoint = await clockFromReceipt[mode](receipt);
+
+        expectEvent(receipt, 'DelegateChanged', {
+          delegator: this.account1,
+          fromDelegate: this.account1,
+          toDelegate: this.account1Delegatee,
+        });
+        expectEvent(receipt, 'DelegateVotesChanged', {
+          delegate: this.account1,
+          previousBalance: '1',
+          newBalance: '0',
+>>>>>>> master
         });
 
         it('rejects bad nonce', async function () {
@@ -219,6 +374,7 @@ function shouldBehaveLikeVotes(accounts, tokens, fungible = true) {
             'Votes: invalid nonce',
           );
         });
+<<<<<<< HEAD
 
         it('rejects expired permit', async function () {
           const expiry = (await time.latest()) - time.duration.weeks(1);
@@ -235,6 +391,18 @@ function shouldBehaveLikeVotes(accounts, tokens, fungible = true) {
 
           await expectRevert(this.votes.delegateBySig(delegatee, nonce, expiry, v, r, s), 'Votes: signature expired');
         });
+=======
+
+        expect(await this.votes.delegates(this.account1)).to.be.equal(this.account1Delegatee);
+
+        expect(await this.votes.getVotes(this.account1)).to.be.bignumber.equal('0');
+        expect(await this.votes.getVotes(this.account1Delegatee)).to.be.bignumber.equal('1');
+        expect(await this.votes.getPastVotes(this.account1, timepoint - 1)).to.be.bignumber.equal('1');
+        expect(await this.votes.getPastVotes(this.account1Delegatee, timepoint - 1)).to.be.bignumber.equal('0');
+        await time.advanceBlock();
+        expect(await this.votes.getPastVotes(this.account1, timepoint)).to.be.bignumber.equal('0');
+        expect(await this.votes.getPastVotes(this.account1Delegatee, timepoint)).to.be.bignumber.equal('1');
+>>>>>>> master
       });
     });
 
@@ -244,15 +412,38 @@ function shouldBehaveLikeVotes(accounts, tokens, fungible = true) {
       });
 
       it('reverts if block number >= current block', async function () {
-        await expectRevert(this.votes.getPastTotalSupply(5e10), 'block not yet mined');
+        await expectRevert(this.votes.getPastTotalSupply(5e10), 'future lookup');
       });
 
       it('returns 0 if there are no checkpoints', async function () {
         expect(await this.votes.getPastTotalSupply(0)).to.be.bignumber.equal('0');
       });
 
+<<<<<<< HEAD
       it('returns the correct checkpointed total supply', async function () {
         const blockNumber = Number(await time.latestBlock());
+=======
+      it('returns the latest block if >= last checkpoint block', async function () {
+        const { receipt } = await this.votes.$_mint(this.account1, this.NFT0);
+        const timepoint = await clockFromReceipt[mode](receipt);
+        await time.advanceBlock();
+        await time.advanceBlock();
+
+        expect(await this.votes.getPastTotalSupply(timepoint - 1)).to.be.bignumber.equal('0');
+        expect(await this.votes.getPastTotalSupply(timepoint + 1)).to.be.bignumber.equal('1');
+      });
+
+      it('returns zero if < first checkpoint block', async function () {
+        await time.advanceBlock();
+        const { receipt } = await this.votes.$_mint(this.account1, this.NFT1);
+        const timepoint = await clockFromReceipt[mode](receipt);
+        await time.advanceBlock();
+        await time.advanceBlock();
+
+        expect(await this.votes.getPastTotalSupply(timepoint - 1)).to.be.bignumber.equal('0');
+        expect(await this.votes.getPastTotalSupply(timepoint + 1)).to.be.bignumber.equal('1');
+      });
+>>>>>>> master
 
         await this.votes.$_mint(accounts[1], tokens[0]); // mint 0
         await time.advanceBlock();
@@ -267,6 +458,7 @@ function shouldBehaveLikeVotes(accounts, tokens, fungible = true) {
         await this.votes.$_burn(...(fungible ? [accounts[1]] : []), tokens[2]); // burn 2
         await time.advanceBlock();
 
+<<<<<<< HEAD
         const weight = tokens.map(getWeight);
 
         expect(await this.votes.getPastTotalSupply(blockNumber)).to.be.bignumber.equal('0');
@@ -282,6 +474,25 @@ function shouldBehaveLikeVotes(accounts, tokens, fungible = true) {
         expect(await this.votes.getPastTotalSupply(blockNumber + 10)).to.be.bignumber.equal(weight[2]);
         expect(await this.votes.getPastTotalSupply(blockNumber + 11)).to.be.bignumber.equal('0');
         await expectRevert(this.votes.getPastTotalSupply(blockNumber + 12), 'Checkpoints: block not yet mined');
+=======
+        t1.timepoint = await clockFromReceipt[mode](t1.receipt);
+        t2.timepoint = await clockFromReceipt[mode](t2.receipt);
+        t3.timepoint = await clockFromReceipt[mode](t3.receipt);
+        t4.timepoint = await clockFromReceipt[mode](t4.receipt);
+        t5.timepoint = await clockFromReceipt[mode](t5.receipt);
+
+        expect(await this.votes.getPastTotalSupply(t1.timepoint - 1)).to.be.bignumber.equal('0');
+        expect(await this.votes.getPastTotalSupply(t1.timepoint)).to.be.bignumber.equal('1');
+        expect(await this.votes.getPastTotalSupply(t1.timepoint + 1)).to.be.bignumber.equal('1');
+        expect(await this.votes.getPastTotalSupply(t2.timepoint)).to.be.bignumber.equal('0');
+        expect(await this.votes.getPastTotalSupply(t2.timepoint + 1)).to.be.bignumber.equal('0');
+        expect(await this.votes.getPastTotalSupply(t3.timepoint)).to.be.bignumber.equal('1');
+        expect(await this.votes.getPastTotalSupply(t3.timepoint + 1)).to.be.bignumber.equal('1');
+        expect(await this.votes.getPastTotalSupply(t4.timepoint)).to.be.bignumber.equal('0');
+        expect(await this.votes.getPastTotalSupply(t4.timepoint + 1)).to.be.bignumber.equal('0');
+        expect(await this.votes.getPastTotalSupply(t5.timepoint)).to.be.bignumber.equal('1');
+        expect(await this.votes.getPastTotalSupply(t5.timepoint + 1)).to.be.bignumber.equal('1');
+>>>>>>> master
       });
     });
 
@@ -296,7 +507,11 @@ function shouldBehaveLikeVotes(accounts, tokens, fungible = true) {
 
       describe('getPastVotes', function () {
         it('reverts if block number >= current block', async function () {
+<<<<<<< HEAD
           await expectRevert(this.votes.getPastVotes(accounts[2], 5e10), 'block not yet mined');
+=======
+          await expectRevert(this.votes.getPastVotes(this.account2, 5e10), 'future lookup');
+>>>>>>> master
         });
 
         it('returns 0 if there are no checkpoints', async function () {
@@ -304,21 +519,41 @@ function shouldBehaveLikeVotes(accounts, tokens, fungible = true) {
         });
 
         it('returns the latest block if >= last checkpoint block', async function () {
+<<<<<<< HEAD
           const tx = await this.votes.delegate(accounts[2], { from: accounts[1] });
           await time.advanceBlock();
           await time.advanceBlock();
           const latest = await this.votes.getVotes(accounts[2]);
           expect(await this.votes.getPastVotes(accounts[2], tx.receipt.blockNumber)).to.be.bignumber.equal(latest);
           expect(await this.votes.getPastVotes(accounts[2], tx.receipt.blockNumber + 1)).to.be.bignumber.equal(latest);
+=======
+          const { receipt } = await this.votes.delegate(this.account2, { from: this.account1 });
+          const timepoint = await clockFromReceipt[mode](receipt);
+          await time.advanceBlock();
+          await time.advanceBlock();
+
+          const latest = await this.votes.getVotes(this.account2);
+          expect(await this.votes.getPastVotes(this.account2, timepoint)).to.be.bignumber.equal(latest);
+          expect(await this.votes.getPastVotes(this.account2, timepoint + 1)).to.be.bignumber.equal(latest);
+>>>>>>> master
         });
 
         it('returns zero if < first checkpoint block', async function () {
           await time.advanceBlock();
+<<<<<<< HEAD
           const tx = await this.votes.delegate(accounts[2], { from: accounts[1] });
           await time.advanceBlock();
           await time.advanceBlock();
 
           expect(await this.votes.getPastVotes(accounts[2], tx.receipt.blockNumber - 1)).to.be.bignumber.equal('0');
+=======
+          const { receipt } = await this.votes.delegate(this.account2, { from: this.account1 });
+          const timepoint = await clockFromReceipt[mode](receipt);
+          await time.advanceBlock();
+          await time.advanceBlock();
+
+          expect(await this.votes.getPastVotes(this.account2, timepoint - 1)).to.be.bignumber.equal('0');
+>>>>>>> master
         });
       });
     });
