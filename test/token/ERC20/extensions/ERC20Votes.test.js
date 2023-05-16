@@ -397,9 +397,9 @@ contract('ERC20Votes', function (accounts) {
             expect(await this.token.numCheckpoints(other1)).to.be.bignumber.equal('0');
 
             const [t1, t2, t3] = await batchInBlock([
-              () => this.token.delegate(other1, { from: recipient, gas: 100000 }),
-              () => this.token.transfer(other2, 10, { from: recipient, gas: 100000 }),
-              () => this.token.transfer(other2, 10, { from: recipient, gas: 100000 }),
+              () => this.token.delegate(other1, { from: recipient, gas: 200000 }),
+              () => this.token.transfer(other2, 10, { from: recipient, gas: 200000 }),
+              () => this.token.transfer(other2, 10, { from: recipient, gas: 200000 }),
             ]);
             t1.timepoint = await clockFromReceipt[mode](t1.receipt);
             t2.timepoint = await clockFromReceipt[mode](t2.receipt);
