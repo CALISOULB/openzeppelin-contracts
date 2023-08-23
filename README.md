@@ -19,6 +19,9 @@
 
 :building_construction: **Want to scale your decentralized application?** Check out [OpenZeppelin Defender](https://openzeppelin.com/defender) — a secure platform for automating and monitoring your operations.
 
+> **Note**
+> You are looking at the upgradeable variant of OpenZeppelin Contracts. Be sure to review the documentation on [Using OpenZeppelin Contracts with Upgrades](https://docs.openzeppelin.com/contracts/4.x/upgradeable).
+
 ## Overview
 
 ### Installation
@@ -26,7 +29,7 @@
 #### Hardhat, Truffle (npm)
 
 ```
-$ npm install @openzeppelin/contracts
+$ npm install @openzeppelin/contracts-upgradeable
 ```
 
 OpenZeppelin Contracts features a [stable API](https://docs.openzeppelin.com/contracts/releases-stability#api-stability), which means that your contracts won't break unexpectedly when upgrading to a newer minor version.
@@ -38,10 +41,10 @@ OpenZeppelin Contracts features a [stable API](https://docs.openzeppelin.com/con
 > **Warning** Foundry installs the latest version initially, but subsequent `forge update` commands will use the `master` branch.
 
 ```
-$ forge install OpenZeppelin/openzeppelin-contracts
+$ forge install OpenZeppelin/openzeppelin-contracts-upgradeable
 ```
 
-Add `@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/` in `remappings.txt.` 
+Add `@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/` in `remappings.txt.` 
 
 ### Usage
 
@@ -50,10 +53,11 @@ Once installed, you can use the contracts in the library by importing them:
 ```solidity
 pragma solidity ^0.8.20;
 
-import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 
-contract MyCollectible is ERC721 {
-    constructor() ERC721("MyCollectible", "MCO") {
+contract MyCollectible is ERC721Upgradeable {
+    function initialize() initializer public {
+        __ERC721_init("MyCollectible", "MCO");
     }
 }
 ```
