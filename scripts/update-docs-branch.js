@@ -22,6 +22,14 @@ if (!match) {
 }
 
 const current = match.groups;
+
+const pkgVersion = require('../package.json').version;
+
+if (pkgVersion.includes('-') && current.minor != '0') {
+  console.error('Refusing to update docs: prerelease detected');
+  process.exit(0);
+}
+
 const docsBranch = `docs-v${current.major}.x`;
 
 // Fetch remotes and find the docs branch if it exists
